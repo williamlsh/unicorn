@@ -10,6 +10,7 @@ import (
 )
 
 type report struct {
+	addr                  string
 	min, avg, max, stddev float64 // calculation results
 }
 
@@ -26,7 +27,7 @@ func ping(ctx context.Context, addr string, timeout time.Duration, count int) (r
 		if err != nil {
 			// Skip timed out ping.
 			results = append(results, 0)
-			fmt.Printf("Ping %s timeout: %v\n", addr, err)
+			fmt.Printf("Ping timeout: seq=%d addr=%s err=%v\n", i+1, addr, err)
 			break
 		}
 		_ = conn.Close()
@@ -59,9 +60,10 @@ func ping(ctx context.Context, addr string, timeout time.Duration, count int) (r
 	stddev = math.Sqrt(stddev / float64(count))
 
 	return report{
+		addr,
 		min,
-		max,
 		avg,
+		max,
 		stddev,
 	}, nil
 }
