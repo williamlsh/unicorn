@@ -28,7 +28,7 @@ func ping(ctx context.Context, addr string, timeout time.Duration, count int) (r
 			// Skip timed out ping.
 			results = append(results, 0)
 			fmt.Printf("Ping timeout: seq=%d addr=%s err=%v\n", i+1, addr, err)
-			break
+			continue
 		}
 		_ = conn.Close()
 
