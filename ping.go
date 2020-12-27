@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"sort"
 	"time"
 )
 
@@ -66,4 +67,13 @@ func ping(ctx context.Context, addr string, timeout time.Duration, count int) (r
 		max,
 		stddev,
 	}, nil
+}
+
+func sortAll(reports []report) {
+	sort.SliceStable(reports, func(i, j int) bool {
+		return reports[i].avg < reports[j].avg
+	})
+	for _, r := range reports {
+		fmt.Printf("Ping rank: %+v\n", r)
+	}
 }

@@ -61,15 +61,26 @@ func main() {
 		return nil
 	})
 	g.Go(func() error {
+		var reports []report
 		for _, s := range subscriptions {
 			report, err := ping(ctx, s.Host, timeout*time.Second, count)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Report: %#v\n\n", report)
+			fmt.Printf("Report: %+v\n\n", report)
+
+			// Filter hosts that is unable to ping.
+			if report.avg > 0 {
+				reports = append(reports, report)
+			}
 		}
+
+		sortAll(reports)
+
 		return nil
 	})
 
-	fmt.Println("Done", g.Wait())
+	if err := g.Wait(); err != nil {
+		fmt.Printf("failed: %v\n", err)
+	}
 }
