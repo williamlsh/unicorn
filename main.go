@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -62,20 +64,40 @@ func main() {
 	})
 	g.Go(func() error {
 		var reports []report
+		reportsByCountry := make(map[string][]report)
 		for _, s := range subscriptions {
-			report, err := ping(ctx, s.Host, timeout*time.Second, count)
+			rpt, err := ping(ctx, s.Host, timeout*time.Second, count)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Report: %+v\n\n", report)
+			fmt.Printf("Report: %+v\n\n", rpt)
 
 			// Filter hosts that is unable to ping.
-			if report.avg > 0 {
-				reports = append(reports, report)
+			if rpt.avg > 0 {
+				reports = append(reports, rpt)
+
+				// Group reports by country.
+				country := s.Fragment[:strings.Index(s.Fragment, "-")]
+				if _, ok := reportsByCountry[country]; !ok {
+					reportsByCountry[country] = make([]report, 0)
+				}
+				group := reportsByCountry[country]
+				group = append(group, rpt)
+				reportsByCountry[country] = group
 			}
 		}
 
 		sortAll(reports)
+
+		for k, g := range reportsByCountry {
+			sort.SliceStable(g, func(i, j int) bool {
+				return g[i].avg < g[j].avg
+			})
+			fmt.Printf("Report of %s:\n", k)
+			for _, r := range g {
+				fmt.Printf("%+v\n", r)
+			}
+		}
 
 		return nil
 	})
