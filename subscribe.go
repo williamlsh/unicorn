@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -43,6 +44,16 @@ func fetch(client *http.Client, url string) (*http.Response, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, errors.New("response status not ok")
+	}
+
+	if resp.Header.Get("content-type") != "text/plain;charset=utf-8" {
+		_ = resp.Body.Close()
+		return nil, errors.New("content type not supported")
 	}
 
 	return resp, nil
