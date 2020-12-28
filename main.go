@@ -38,14 +38,7 @@ func main() {
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
-		// Folders names may be duplicate, use a map to avoid creating the same folder again.
-		folders := make(map[string]struct{})
-		for _, s := range subscriptions {
-			if err := buildConfig(ctx, s, configDir, folders); err != nil {
-				return err
-			}
-		}
-		return nil
+		return batchBuild(ctx, subscriptions)
 	})
 
 	g.Go(func() error {
