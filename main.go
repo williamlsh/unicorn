@@ -42,13 +42,13 @@ func main() {
 	})
 
 	g.Go(func() error {
-		rpt, err := makeReport(ctx, subscriptions)
+		result, err := pingAll(ctx, subscriptions)
 		if err != nil {
 			return err
 		}
 
-		sortOrigin(rpt.origin)
-		sortByCountry(rpt.byCountry)
+		result.sortAll()
+		result.sortByCountry()
 		return nil
 	})
 

@@ -88,15 +88,51 @@ func calculate(results []float64) stats {
 	}
 }
 
-type report struct {
-	origin    []stats            // Non-classified stats
-	byCountry map[string][]stats // Grouped stats by countries
+type primaryData struct {
+	basics
+	groups
 }
 
-func makeReport(ctx context.Context, subscriptions []*url.URL) (report, error) {
-	var origReport []stats
-	reportByCountry := make(map[string][]stats)
+// groups is grouped stats by countries
+type groups map[string]basics
 
+// basics is non-classified stats.
+type basics []stats
+
+func (b basics) String() string {
+	var a string
+	for _, s := range b {
+		a += fmt.Sprintln(s)
+	}
+	return a
+}
+
+func (d primaryData) sortAll() basics {
+	sort.SliceStable(d.basics, func(i, j int) bool {
+		return d.basics[i].avg < d.basics[j].avg
+	})
+
+	// Print the ranks.
+	fmt.Printf("\nBasic ranks:\n%s", d.basics)
+	return d.basics
+}
+
+func (d primaryData) sortByCountry() groups {
+	for k, g := range d.groups {
+		sort.SliceStable(g, func(i, j int) bool {
+			return g[i].avg < g[j].avg
+		})
+		d.groups[k] = g
+
+		// Print the ranks.
+		fmt.Printf("\nGrouped ranks of %s:\n%s", k, g)
+	}
+	return d.groups
+}
+
+func pingAll(ctx context.Context, subscriptions []*url.URL) (primaryData, error) {
+	var basicStats basics
+	groupedStats := make(groups)
 	ch := make(chan stats)
 
 	var wg sync.WaitGroup
@@ -109,49 +145,25 @@ func makeReport(ctx context.Context, subscriptions []*url.URL) (report, error) {
 		close(ch)
 	}()
 
-	for rpt := range ch {
-		if rpt.err != nil {
-			return report{}, rpt.err
+	for result := range ch {
+		if result.err != nil {
+			return primaryData{}, result.err
 		}
 
 		// Filter hosts that is unable to ping.
-		if rpt.avg > 0 {
-			origReport = append(origReport, rpt)
+		if result.avg > 0 {
+			basicStats = append(basicStats, result)
 
-			// Group reports by country.
-			country := rpt.url.Fragment[:strings.Index(rpt.url.Fragment, "-")]
-			if _, ok := reportByCountry[country]; !ok {
-				reportByCountry[country] = make([]stats, 0)
+			// Group stats by country.
+			country := result.url.Fragment[:strings.Index(result.url.Fragment, "-")]
+			if _, ok := groupedStats[country]; !ok {
+				groupedStats[country] = make(basics, 0)
 			}
-			group := reportByCountry[country]
-			group = append(group, rpt)
-			reportByCountry[country] = group
+			group := groupedStats[country]
+			group = append(group, result)
+			groupedStats[country] = group
 		}
 	}
 
-	return report{origReport, reportByCountry}, nil
-}
-
-func sortOrigin(data []stats) {
-	sort.SliceStable(data, func(i, j int) bool {
-		return data[i].avg < data[j].avg
-	})
-
-	fmt.Println("\nOriginal report:")
-	for _, r := range data {
-		fmt.Println(r)
-	}
-}
-
-func sortByCountry(data map[string][]stats) {
-	for k, g := range data {
-		sort.SliceStable(g, func(i, j int) bool {
-			return g[i].avg < g[j].avg
-		})
-
-		fmt.Printf("\nReport of %s:\n", k)
-		for _, r := range g {
-			fmt.Println(r)
-		}
-	}
+	return primaryData{basicStats, groupedStats}, nil
 }

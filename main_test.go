@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 }
 
 func handleSubscription(w http.ResponseWriter, r *http.Request) {
-	sampleConfig :=
+	content :=
 		`trojan://mypassword1@localhost:443#US-us1
 trojan://mypassword2@localhost:443#US-us2
 trojan://mypassword3@localhost:443#US-us3
@@ -31,7 +31,7 @@ trojan://mypassword9@localhost:443#JP-jp3
 `
 
 	w.Header().Set("content-type", "text/plain;charset=utf-8")
-	if _, err := base64.NewEncoder(base64.StdEncoding, w).Write([]byte(sampleConfig)); err != nil {
+	if _, err := base64.NewEncoder(base64.StdEncoding, w).Write([]byte(content)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
