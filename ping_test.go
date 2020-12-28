@@ -28,3 +28,26 @@ func TestPing(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestPingAll(t *testing.T) {
+	t.Parallel()
+
+	resp, err := fetch(server.Client(), server.URL)
+	if err != nil {
+		t.Skip(err)
+	}
+	defer resp.Body.Close()
+
+	subscriptions, err := parseSubscriptions(resp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	result, err := pingAll(context.Background(), subscriptions)
+	if err != nil {
+		t.Error(err)
+	}
+
+	result.sortAll()
+	result.sortByCountry()
+}
