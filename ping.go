@@ -9,17 +9,27 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
 type stats struct {
-	addr                  string
+	err                   error
+	url                   *url.URL
 	min, avg, max, stddev float64 // calculation results
 }
 
-func ping(ctx context.Context, addr string, timeout time.Duration, count int) (stats, error) {
+func (s stats) String() string {
+	return fmt.Sprintf("Ping stats of %s min: %.2fms max: %.2fms avg: %.2fms stddev: %.2fms", s.url.Host, s.min, s.max, s.avg, s.stddev)
+}
+
+func ping(ctx context.Context, trueURL *url.URL, timeout time.Duration, count int, wg *sync.WaitGroup, ch chan<- stats) {
+	defer wg.Done()
+	addr := trueURL.Host
+
 	if count < 1 {
-		return stats{}, errors.New("ping count must be larger than 0")
+		ch <- stats{err: errors.New("ping count must be larger than 0")}
+		return
 	}
 
 	results := make([]float64, count)
@@ -39,13 +49,12 @@ func ping(ctx context.Context, addr string, timeout time.Duration, count int) (s
 		roundtrip := float64(endAt.UnixNano()-startAt.UnixNano()) / 1e6
 		results[i] = roundtrip
 
-		fmt.Printf("Ping %s: seq=%d time=%.3fms\n", addr, i+1, roundtrip)
+		fmt.Printf("Ping %s seq=%d time=%.3fms\n", addr, i+1, roundtrip)
 	}
 
 	rpt := calculate(results)
-	rpt.addr = addr
-
-	return rpt, nil
+	rpt.url = trueURL
+	ch <- rpt
 }
 
 func calculate(results []float64) stats {
@@ -70,7 +79,8 @@ func calculate(results []float64) stats {
 	stddev = math.Sqrt(stddev / float64(count))
 
 	return stats{
-		"",
+		nil,
+		nil,
 		min,
 		avg,
 		max,
@@ -86,19 +96,30 @@ type report struct {
 func makeReport(ctx context.Context, subscriptions []*url.URL) (report, error) {
 	var origReport []stats
 	reportByCountry := make(map[string][]stats)
+
+	ch := make(chan stats)
+
+	var wg sync.WaitGroup
 	for _, s := range subscriptions {
-		rpt, err := ping(ctx, s.Host, timeout*time.Second, count)
-		if err != nil {
-			return report{}, err
+		wg.Add(1)
+		go ping(ctx, s, timeout*time.Second, count, &wg, ch)
+	}
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for rpt := range ch {
+		if rpt.err != nil {
+			return report{}, rpt.err
 		}
-		fmt.Printf("Report: %+v\n\n", rpt)
 
 		// Filter hosts that is unable to ping.
 		if rpt.avg > 0 {
 			origReport = append(origReport, rpt)
 
 			// Group reports by country.
-			country := s.Fragment[:strings.Index(s.Fragment, "-")]
+			country := rpt.url.Fragment[:strings.Index(rpt.url.Fragment, "-")]
 			if _, ok := reportByCountry[country]; !ok {
 				reportByCountry[country] = make([]stats, 0)
 			}
@@ -115,8 +136,10 @@ func sortOrigin(data []stats) {
 	sort.SliceStable(data, func(i, j int) bool {
 		return data[i].avg < data[j].avg
 	})
+
+	fmt.Println("\nOriginal report:")
 	for _, r := range data {
-		fmt.Printf("Ping rank: %+v\n", r)
+		fmt.Println(r)
 	}
 }
 
@@ -125,9 +148,10 @@ func sortByCountry(data map[string][]stats) {
 		sort.SliceStable(g, func(i, j int) bool {
 			return g[i].avg < g[j].avg
 		})
+
 		fmt.Printf("\nReport of %s:\n", k)
 		for _, r := range g {
-			fmt.Printf("%+v\n", r)
+			fmt.Println(r)
 		}
 	}
 }

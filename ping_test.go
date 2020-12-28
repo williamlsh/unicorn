@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 )
@@ -15,9 +15,16 @@ func TestPing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rpt, err := ping(context.Background(), trueURL.Host, 3*time.Second, 3)
-	if err != nil {
+
+	ch := make(chan stats)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go ping(context.Background(), trueURL, 3*time.Second, 3, &wg, ch)
+	go wg.Wait()
+
+	rpt := <-ch
+	if rpt.err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("%+v\n", rpt)
 }
