@@ -113,3 +113,22 @@ func validateTrojan(trueURL *url.URL) error {
 
 	return nil
 }
+
+func subscribe(httpProxy, subURL string) ([]*url.URL, error) {
+	client, err := newClient(httpProxy)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := fetch(client, subURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	subscriptions, err := parseSubscriptions(resp)
+	if err != nil {
+		return nil, err
+	}
+	return subscriptions, nil
+}

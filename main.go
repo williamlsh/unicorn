@@ -31,27 +31,14 @@ func main() {
 		log.Fatal("Input subscriptin URL is empty")
 	}
 
-	client, err := newClient(httpProxy)
+	subscriptions, err := subscribe(httpProxy, subURL)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	resp, err := fetch(client, subURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	subscriptions, err := parseSubscriptions(resp)
-	if err != nil {
-		fmt.Println(err)
-		// Return to honor any deferred call.
-		return
+		log.Fatalf("failed to subscribe: %v", err)
 	}
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
-		// Folders names may be duplicate, use a map to avoid creating the same folder.
+		// Folders names may be duplicate, use a map to avoid creating the same folder again.
 		folders := make(map[string]struct{})
 		for _, s := range subscriptions {
 			if err := buildConfig(ctx, s, configDir, folders); err != nil {
@@ -60,6 +47,7 @@ func main() {
 		}
 		return nil
 	})
+
 	g.Go(func() error {
 		rpt, err := makeReport(ctx, subscriptions)
 		if err != nil {
@@ -67,9 +55,7 @@ func main() {
 		}
 
 		sortOrigin(rpt.origin)
-
 		sortByCountry(rpt.byCountry)
-
 		return nil
 	})
 
