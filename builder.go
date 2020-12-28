@@ -44,13 +44,7 @@ var defaultConfig = `
 
 // buildConfig builds configuration from subscription.
 func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folders map[string]struct{}) error {
-	// Password in trojan URL is username in standard URL scheme.
-	password := trueURL.User.Username()
-
 	dashIndex := strings.Index(trueURL.Fragment, "-")
-	if dashIndex < 1 {
-		return fmt.Errorf("URL fragment schema invalid: %s", trueURL.Fragment)
-	}
 
 	folder := trueURL.Fragment[:dashIndex]
 	dirpath := path.Join(configDir, folder)
@@ -75,7 +69,7 @@ func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folder
 		return fmt.Errorf("could not create file: %w", err)
 	}
 
-	if _, err := strings.NewReplacer("example.com", trueURL.Hostname(), "password1", password).WriteString(file, defaultConfig); err != nil {
+	if _, err := strings.NewReplacer("example.com", trueURL.Hostname(), "password1", trueURL.User.Username()).WriteString(file, defaultConfig); err != nil {
 		return fmt.Errorf("could not replace strings: %w", err)
 	}
 

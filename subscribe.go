@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // newClient returns a new HTTP client with HTTP proxy forwarding if httpProxy is not nil
@@ -56,8 +57,12 @@ func parseSubscriptions(resp *http.Response) ([]*url.URL, error) {
 	decoder := base64.NewDecoder(base64.StdEncoding, resp.Body)
 	scanner := bufio.NewScanner(decoder)
 	for scanner.Scan() {
-		trueURL, err := parseTextToURL(scanner.Text())
+		trueURL, err := url.Parse(scanner.Text())
 		if err != nil {
+			return nil, err
+		}
+
+		if err := validateTrojan(trueURL); err != nil {
 			return nil, err
 		}
 		subscriptions = append(subscriptions, trueURL)
@@ -69,13 +74,31 @@ func parseSubscriptions(resp *http.Response) ([]*url.URL, error) {
 	return subscriptions, nil
 }
 
-func parseTextToURL(text string) (*url.URL, error) {
-	trueURL, err := url.Parse(text)
-	if err != nil {
-		return nil, err
-	}
+func validateTrojan(trueURL *url.URL) error {
 	if trueURL.Scheme != "trojan" {
-		return nil, fmt.Errorf("invalid subscription URL: %s", trueURL.Scheme)
+		return fmt.Errorf("invalid subscription URL: %s", trueURL.Scheme)
 	}
-	return trueURL, nil
+
+	// Password in trojan URL is username in standard URL scheme.
+	if trueURL.User.Username() == "" {
+		return fmt.Errorf("no password in subscription URL")
+	}
+
+	if trueURL.Hostname() == "" {
+		return fmt.Errorf("no host in subscription URL")
+	}
+
+	if trueURL.Port() == "" {
+		return fmt.Errorf("no port in subscription URL")
+	}
+
+	if trueURL.Fragment == "" {
+		return fmt.Errorf("no fragment in subscription URL")
+	}
+
+	if strings.Index(trueURL.Fragment, "-") < 1 {
+		return fmt.Errorf("URL fragment schema invalid: %s", trueURL.Fragment)
+	}
+
+	return nil
 }
