@@ -45,7 +45,6 @@ var defaultConfig = `
 // buildConfig builds configuration from subscription.
 func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folders map[string]struct{}, force bool) error {
 	dashIndex := strings.Index(trueURL.Fragment, "-")
-
 	folder := trueURL.Fragment[:dashIndex]
 	dirpath := path.Join(configDir, folder)
 	if _, ok := folders[folder]; !ok {

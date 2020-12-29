@@ -25,13 +25,13 @@ func (s stats) String() string {
 
 func ping(ctx context.Context, trueURL *url.URL, timeout time.Duration, count int, wg *sync.WaitGroup, ch chan<- stats) {
 	defer wg.Done()
-	addr := trueURL.Host
 
 	if count < 1 {
 		ch <- stats{err: errors.New("ping count must be larger than 0")}
 		return
 	}
 
+	addr := trueURL.Host
 	results := make([]float64, count)
 	for i := 0; i < count; i++ {
 		startAt := time.Now()
