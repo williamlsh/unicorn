@@ -13,9 +13,9 @@ var server *httptest.Server
 
 func TestMain(m *testing.M) {
 	server = httptest.NewTLSServer(http.HandlerFunc(handleSubscription))
-	os.Exit(m.Run())
+	code := m.Run()
 	server.Close()
-
+	os.Exit(code)
 }
 
 func handleSubscription(w http.ResponseWriter, r *http.Request) {
