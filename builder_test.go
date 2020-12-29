@@ -24,7 +24,7 @@ func TestBuildConfig(t *testing.T) {
 	folders := make(map[string]struct{})
 	tempDir := t.TempDir()
 	for _, s := range subscriptions {
-		if err := buildConfig(context.TODO(), s, tempDir, folders); err != nil {
+		if err := buildConfig(context.TODO(), s, tempDir, folders, false); err != nil {
 			t.Error(err)
 		}
 	}
@@ -38,4 +38,22 @@ func TestBuildConfig(t *testing.T) {
 	}); err != nil {
 		t.Error(err)
 	}
+
+	t.Run("Not force build configurations", func(t *testing.T) {
+		t.Parallel()
+		for _, s := range subscriptions {
+			if err := buildConfig(context.TODO(), s, tempDir, folders, false); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+
+	t.Run("Force build configurations", func(t *testing.T) {
+		t.Parallel()
+		for _, s := range subscriptions {
+			if err := buildConfig(context.TODO(), s, tempDir, folders, true); err != nil {
+				t.Error(err)
+			}
+		}
+	})
 }

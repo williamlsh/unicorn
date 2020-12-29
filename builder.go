@@ -43,7 +43,7 @@ var defaultConfig = `
 }`
 
 // buildConfig builds configuration from subscription.
-func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folders map[string]struct{}) error {
+func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folders map[string]struct{}, force bool) error {
 	dashIndex := strings.Index(trueURL.Fragment, "-")
 
 	folder := trueURL.Fragment[:dashIndex]
@@ -59,7 +59,9 @@ func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folder
 	filepath := path.Join(dirpath, trueURL.Fragment[dashIndex+1:]+".json")
 
 	// Skip updating configuration file modified within a month.
-	if info, err := os.Stat(filepath); !os.IsNotExist(err) && info.ModTime().Before(time.Now().AddDate(0, 1, 0)) {
+	if info, err := os.Stat(filepath); !os.IsNotExist(err) &&
+		info.ModTime().Before(time.Now().AddDate(0, 1, 0)) &&
+		!force {
 		fmt.Println("skipping updating configuration file.")
 		return nil
 	}
@@ -69,18 +71,19 @@ func buildConfig(ctx context.Context, trueURL *url.URL, configDir string, folder
 		return fmt.Errorf("could not create file: %w", err)
 	}
 
-	if _, err := strings.NewReplacer("example.com", trueURL.Hostname(), "password1", trueURL.User.Username()).WriteString(file, defaultConfig); err != nil {
+	replacer := strings.NewReplacer("example.com", trueURL.Hostname(), "password1", trueURL.User.Username())
+	if _, err := replacer.WriteString(file, defaultConfig); err != nil {
 		return fmt.Errorf("could not replace strings: %w", err)
 	}
 
 	return nil
 }
 
-func batchBuild(ctx context.Context, subscriptions []*url.URL) error {
+func batchBuild(ctx context.Context, subscriptions []*url.URL, force bool) error {
 	// Folders names may be duplicate, use a map to avoid creating the same folder again.
 	folders := make(map[string]struct{})
 	for _, s := range subscriptions {
-		if err := buildConfig(ctx, s, configDir, folders); err != nil {
+		if err := buildConfig(ctx, s, configDir, folders, force); err != nil {
 			return err
 		}
 	}

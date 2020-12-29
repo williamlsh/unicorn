@@ -12,6 +12,7 @@ import (
 
 var (
 	subURL, httpProxy, configDir string
+	forceBuild                   bool
 	timeout                      time.Duration
 	count                        int
 )
@@ -20,6 +21,7 @@ func init() {
 	flag.StringVar(&subURL, "url", "", "Subscription URL")
 	flag.StringVar(&httpProxy, "http-proxy", "", "HTTP proxy to retrieve subscription")
 	flag.StringVar(&configDir, "dir", "tmp", "Top level of configuration directory")
+	flag.BoolVar(&forceBuild, "force-build", false, "Force build configurations(default to build only since last month)")
 	flag.DurationVar(&timeout, "timeout", 10, "Single ping timeout in s")
 	flag.IntVar(&count, "count", 3, "Ping counts for every server")
 }
@@ -38,7 +40,7 @@ func main() {
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.Go(func() error {
-		return batchBuild(ctx, subscriptions)
+		return batchBuild(ctx, subscriptions, forceBuild)
 	})
 
 	g.Go(func() error {
