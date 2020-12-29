@@ -18,3 +18,7 @@ jobs:
         with:
           version: v1.29
         continue-on-error: true
+      - name: Test code
+        run: go test -race -v ./...
+      - name: Build project
+        run: go build -race .
