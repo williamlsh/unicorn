@@ -13,6 +13,7 @@ import (
 var (
 	subURL, httpProxy, configDir string
 	forceBuild                   bool
+	enablePing                   bool
 	timeout                      time.Duration
 	count                        int
 )
@@ -22,7 +23,8 @@ func init() {
 	flag.StringVar(&httpProxy, "http-proxy", "", "HTTP proxy to retrieve subscription")
 	flag.StringVar(&configDir, "dir", "tmp", "Top level of configuration directory")
 	flag.BoolVar(&forceBuild, "force-build", false, "Force build configurations(default to build only since last month)")
-	flag.DurationVar(&timeout, "timeout", 10, "Single ping timeout in s")
+	flag.BoolVar(&enablePing, "enable-ping", false, "Enable ping subscriptions")
+	flag.DurationVar(&timeout, "timeout", 10, "Single ping timeout in second")
 	flag.IntVar(&count, "count", 3, "Ping counts for every server")
 }
 
@@ -44,6 +46,10 @@ func main() {
 	})
 
 	g.Go(func() error {
+		if !enablePing {
+			return nil
+		}
+
 		result, err := pingAll(ctx, subscriptions)
 		if err != nil {
 			return err
