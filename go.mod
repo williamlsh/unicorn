@@ -1,4 +1,4 @@
-module github.com/williamlsh/unicon
+module github.com/williamlsh/unicorn
 
 go 1.19
 
